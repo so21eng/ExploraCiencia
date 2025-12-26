@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExploraCiencia Kids 🌟</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://html2pdf.js.org/dist/html2pdf.bundle.min.js"></script>
+    <style>
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-20px); } 60% { transform: translateY(-10px); } }
+        @keyframes bubble { 0% { transform: translateY(100vh); opacity: 0.8; } 100% { transform: translateY(-100vh); opacity: 0; } }
+        @keyframes star { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        body { 
+            font-family: 'Comic Sans MS', cursive, sans-serif; 
+            background: linear-gradient(to bottom, #ffd93d, #6bc7ff, #ff6b6b); 
+            margin: 0; padding: 0; color: #333; overflow-x: hidden; 
+        }
+        .bubbles, .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .bubble { position: absolute; background: rgba(255,255,255,0.8); border-radius: 50%; animation: bubble 12s linear infinite; box-shadow: 0 0 20px rgba(255,255,255,0.8); }
+        .star { position: absolute; background: #ffff00; border-radius: 50%; box-shadow: 0 0 10px #fff; animation: star 2s infinite; }
+
+        header { background: linear-gradient(135deg, #ff1744, #f50057, #e040fb); color: white; text-align: center; padding: 40px; font-size: 3em; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+
+        .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: rgba(255,255,255,0.95); border-radius: 30px; box-shadow: 0 15px 50px rgba(0,0,0,0.3); position: relative; z-index: 1; }
+
+        .screen { display: none; padding: 30px; animation: fadeIn 1s; }
+        .active { display: block; }
+
+        button { 
+            border: none; padding: 18px 35px; margin: 12px; border-radius: 20px; cursor: pointer; 
+            font-size: 1.8em; font-weight: bold; box-shadow: 0 8px 20px rgba(0,0,0,0.3); 
+            transition: all 0.4s; animation: bounce 2.5s infinite, pulse 2s infinite;
+        }
+        button:hover { transform: scale(1.15); box-shadow: 0 15px 30px rgba(0,0,0,0.4); }
+
+        /* Botones de juegos únicos */
+        #btn-quiz { background: linear-gradient(45deg, #ff4081, #f50057); color: white; }
+        #btn-memory { background: linear-gradient(45deg, #7c4dff, #536dfe); color: white; }
+        #btn-wordsearch { background: linear-gradient(45deg, #00e676, #00c853); color: white; }
+        #btn-maze { background: linear-gradient(45deg, #ff1744, #d500f9); color: white; }
+
+        #home-btn {
+            background: linear-gradient(45deg, #ff4081, #f50057); color: white;
+            padding: 18px 45px; border-radius: 50px; font-size: 2.2em;
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        #home-btn:hover { transform: translateX(-50%) scale(1.1) rotate(5deg); }
+
+        #badges { text-align: center; font-size: 2em; margin: 20px 0; }
+        .badge { font-size: 2.5em; margin: 0 10px; animation: spin 4s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Juegos */
+        .memory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; max-width: 800px; margin: 40px auto; }
+        .memory-card { width: 100px; height: 100px; background: #9c27b0; color: white; border-radius: 15px; font-size: 3em; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        .memory-card.flipped { background: #4caf50; transform: rotateY(180deg); }
+
+        #wordsearch-grid { display: grid; gap: 5px; margin: 30px auto; justify-content: center; }
+        .ws-cell { width: 40px; height: 40px; background: #e3f2fd; border: 2px solid #2196f3; border-radius: 8px; text-align: center; font-size: 1.6em; font-weight: bold; cursor: pointer; }
+        .ws-cell.found { background: #ffeb3b; color: #d50000; }
+
+        #maze-canvas { border: 10px solid #ff1744; border-radius: 20px; background: #e3f2fd; }
+
+        .confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+
+        /* Estilos para experimentos */
+        .step { display: none; padding: 40px; border: 6px dashed #00e676; border-radius: 25px; margin-bottom: 40px; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .step.active { display: block; animation: fadeIn 1s ease-in-out; }
+        .categories, #experiment-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; justify-items: center; padding: 20px 0; }
+        .category-card { width: 220px; text-align: center; cursor: pointer; background: linear-gradient(135deg, #ffeb3b, #ffc107); border-radius: 25px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: all 0.5s; }
+        .category-card:hover { transform: rotate(10deg) scale(1.2); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .category-card img { width: 160px; height: 160px; border-radius: 50%; border: 6px solid #ff1744; box-shadow: 0 0 25px rgba(255,23,68,0.7); }
+        .quiz-question { margin: 30px 0; font-size: 1.6em; background: #e3f2fd; padding: 20px; border-radius: 20px; border: 3px solid #2196f3; }
+        .quiz-option { display: block; margin: 15px 0; padding: 18px; background: #bbdefb; border-radius: 15px; cursor: pointer; transition: 0.4s; font-size: 1.3em; }
+        .quiz-option:hover { background: #64b5f6; transform: translateX(10px); }
+    </style>
+</head>
+<body>
+    <div class="bubbles">
+        <div class="bubble" style="left:10%; width:30px; height:30px; animation-duration:15s;"></div>
+        <div class="bubble" style="left:30%; width:40px; height:40px; animation-duration:12s; animation-delay:2s;"></div>
+        <div class="bubble" style="left:50%; width:25px; height:25px; animation-duration:18s; animation-delay:4s;"></div>
+        <div class="bubble" style="left:70%; width:35px; height:35px; animation-duration:10s; animation-delay:6s;"></div>
+        <div class="bubble" style="left:90%; width:30px; height:30px; animation-duration:14s; animation-delay:8s;"></div>
+    </div>
+
+    <header>🌟 ExploraCiencia Kids - ¡Ciencia Divertida! 🔬</header>
+
+    <div class="container">
+        <div id="badges">Insignias: <span class="badge">🔬</span><span class="badge">🧪</span><span class="badge">🌱</span> 
+            Nivel: <span id="level">Principiante</span> | Puntos: <span id="score">0</span>
+        </div>
+
+        <!-- Pantalla Principal -->
+        <div id="main-screen" class="screen active">
+            <h2 style="text-align:center; font-size:3em; color:#ff4757;">¡Bienvenido, pequeño científico! 🚀</h2>
+            <div style="text-align:center; margin:40px 0;">
+                <button id="btn-quiz">Quiz Científico ❓</button>
+                <button id="btn-memory">Juego de Memoria 🧠</button>
+                <button id="btn-wordsearch">Sopa de Letras 🔍</button>
+                <button id="btn-maze">Laberinto del Agua 💧</button>
+            </div>
+            <h3 style="text-align:center;">O elige un experimento:</h3>
+            <div style="text-align:center;">
+                <button onclick="showExperiments()">¡Hacer un Experimento! 🧑‍🔬</button>
+            </div>
+        </div>
+
+        <!-- Pantalla de Juegos -->
+        <div id="game-screen" class="screen">
+            <div id="game-content"></div>
+        </div>
+
+        <!-- Pantalla de Experimentos -->
+        <div id="experiment-screen" class="screen">
+            <div id="step1" class="step active">
+                <h2 style="text-align:center; font-size:2.8em;">¡Elige una categoría mágica! ✨</h2>
+                <div class="categories">
+                    <div class="category-card" onclick="selectCategory('plantas')">
+                        <img src="https://mommypoppins.com/sites/default/files/nyc_50_science_lead_0.jpg" alt="Plantas"><br>🌱 Plantas
+                    </div>
+                    <div class="category-card" onclick="selectCategory('agua')">
+                        <img src="https://frugalfun4boys.com/wp-content/uploads/2022/06/Water-Fountain-2-1.jpg" alt="Agua"><br>💧 Agua
+                    </div>
+                    <div class="category-card" onclick="selectCategory('aire')">
+                        <img src="https://3.bp.blogspot.com/-wTsUHIQRH7s/U38mvLeofTI/AAAAAAAAENo/9W8BALcuHLI/s1600/2012_0103febrer0002.JPG" alt="Aire"><br>💨 Aire
+                    </div>
+                    <div class="category-card" onclick="selectCategory('materia')">
+                        <img src="https://i.ytimg.com/vi/9EUfVIon6t8/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDmY2T_MNRqkHNlW2ysVN4k5Zc_Aw" alt="Materia"><br>🧪 Materia
+                    </div>
+                    <div class="category-card" onclick="selectCategory('energia')">
+                        <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjBrsIvWUm5_87BbuRGQJ24kCEETtoV75jO-kHs0aXhHX1LQ9q-whyphenhyphenzbNefpyj_DMmI2wYzz76Oyiy7bpMojVVqi71xoCRvyLCIpwTL0ZRKAdozoB-FEbc9OFCyc9t8vRWVNYmT88B7TmA/s1600/How+to+make+a+walking+water+rainbow+science+experiment+for+kids+%25283%2529.jpg" alt="Energía"><br>⚡ Energía
+                    </div>
+                    <div class="category-card" onclick="selectCategory('luz')">
+                        <img src="https://i.ytimg.com/vi/DJ6ahjpckaE/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDyXMPW_P9NSMGHKkNR_4UN_668Aw" alt="Luz"><br>🌈 Luz
+                    </div>
+                    <div class="category-card" onclick="selectCategory('fisica')">
+                        <img src="https://cdn.babbledabbledo.com/wp-content/uploads/2017/03/20-Science-Fair-Projects-FI.jpg" alt="Física"><br>🚀 Física
+                    </div>
+                    <div class="category-card" onclick="selectCategory('biologia')">
+                        <img src="https://i.ytimg.com/vi/9J_SCQhTmcM/maxresdefault.jpg" alt="Biología"><br>🦠 Biología
+                    </div>
+                </div>
+            </div>
+            <div id="step1-5" class="step">
+                <h2 style="text-align:center; font-size:2.8em;">¡Elige tu experimento épico! 🏆</h2>
+                <div id="experiment-list" class="categories"></div>
+            </div>
+            <div id="step2" class="step"><h2>Explora y observa 👀</h2><p id="observation"></p><img id="anim-img" style="max-width:100%; border-radius:20px; box-shadow:0 6px 20px rgba(0,0,0,0.3); transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"></div>
+            <div id="step3" class="step"><h2>Plantea tu pregunta ❓</h2><p id="question-guide"></p><input type="text" id="question" placeholder="Escribe tu pregunta aquí..."><button onclick="nextStep()">¡Siguiente! ➡️</button></div>
+            <div id="step4" class="step"><h2>Crea tu hipótesis 💡</h2><textarea id="hypothesis" placeholder="¿Qué crees que pasará? Escribe o graba..."></textarea><button onclick="nextStep()">¡Siguiente! ➡️</button></div>
+            <div id="step5" class="step"><h2>¡Experimenta! 🧑‍🔬</h2><p id="instructions"></p><input type="file" id="photos" multiple accept="image/*"><div id="photo-preview" style="display:flex; flex-wrap:wrap;"></div><button onclick="nextStep()">¡Siguiente! ➡️</button></div>
+            <div id="step6" class="step"><h2>Registra resultados 📊</h2><button onclick="addRow()">Añadir día +</button><table id="data-table"><tr><th>Día</th><th>Observación</th></tr><tr><td>1</td><td><input type="text"></td></tr></table><canvas id="chart"></canvas><button onclick="drawChart()">¡Generar gráfico mágico! 📈</button><button onclick="nextStep()">¡Siguiente! ➡️</button></div>
+            <div id="step7" class="step"><h2>Analiza y concluye 🤔</h2><textarea id="conclusion" placeholder="¿Qué descubriste? ¡Cuéntanos!"></textarea><button onclick="nextStep()">¡Siguiente! ➡️</button></div>
+            <div id="step8" class="step"><h2>¡Juega y comparte! 🎉</h2>
+                <div id="quiz-section">
+                    <h3>Mini-Juego: Quiz Científico 🏆</h3>
+                    <div id="quiz"></div>
+                    <button onclick="checkQuiz()">¡Verificar respuestas! ✅</button>
+                    <p id="quiz-result"></p>
+                </div>
+                <div id="drag-game">
+                    <h3>Juego: Ordena los pasos 🧩</h3>
+                    <div class="drag-container">
+                        <div id="drag-items"></div>
+                        <div id="drop-zones"></div>
+                    </div>
+                    <button onclick="checkDrag()">¡Verificar! ✅</button>
+                    <p id="drag-result"></p>
+                </div>
+                <button onclick="generateReport()">Generar informe PDF 📄</button>
+                <button onclick="share()">¡Compartir con amigos! 👥</button>
+            </div>
+            <div id="report-preview"></div>
+            <div style="text-align:center;">
+                <button onclick="prevStep()">⬅️ Anterior</button>
+                <button id="next-btn" onclick="nextStep()">Siguiente ➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <button id="home-btn">🏠 Inicio</button>
+    <canvas id="confetti" class="confetti"></canvas>
+
+    <script>
+        let score = 0;
+        let level = 'Principiante';
+        const levels = ['Principiante', 'Explorador', 'Inventor', 'Científico', 'Genio'];
+        let currentGame = '';
+        let currentLevel = 1;
+        let currentStep = 1;
+        let experiment = {};
+        let chart;
+
+        const categories = {
+            plantas: [
+                { key: 'germinacion', name: "Germinación de una semilla", observation: "Observa cómo una semilla se convierte en planta. 🌱", img: "https://1.bp.blogspot.com/-GcvHHNDL4EU/VHdxBqMGOJI/AAAAAAAADcE/OErOF77XlX0/s1600/20141117_105322.jpg", instructions: "Usa frijoles, algodón húmedo y un vaso. Observa varios días.", question_guide: "¿Qué necesita una semilla para crecer?", quiz: [
+                    { q: "¿Qué necesita una semilla para germinar?", opts: ["Agua y luz", "Solo tierra", "Nada"], ans: 0 },
+                    { q: "¿Cuántos días tardó?", opts: ["1 día", "Varios días", "1 hora"], ans: 1 },
+                    { q: "¿Qué pasa sin agua?", opts: ["Crece más rápido", "No germina", "Se hace grande"], ans: 1 }
+                ], steps: ["Observar", "Preguntar", "Hipótesis", "Experimentar", "Concluir"] }
+            ],
+            agua: [
+                { key: 'densidad', name: "Torre de densidad arcoíris", observation: "Líquidos de colores forman capas. 🌈", img: "https://media.licdn.com/dms/image/v2/C5612AQFvSGHe_xaMCA/article-cover_image-shrink_600_2000/article-cover_image-shrink_600_2000/0/1615456791878?e=2147483647&v=beta&t=F7Z530fIHwL5eCgkerngP-Eh-4S8eUeACTxOfak_BBM", instructions: "Mezcla miel, jabón, agua, aceite con colores en un vaso.", question_guide: "¿Por qué flotan unos sobre otros?", quiz: [
+                    { q: "¿Qué es densidad?", opts: ["Peso por volumen", "Color", "Sabor"], ans: 0 },
+                    { q: "¿El aceite flota sobre...?", opts: ["Agua", "Miel", "Nada"], ans: 0 },
+                    { q: "¿Cuántas capas?", opts: ["1", "Varias", "Infinitas"], ans: 1 }
+                ], steps: ["Mezclar", "Observar capas", "Medir", "Concluir", "Dibujar"] },
+                { key: 'agua_cam', name: "Agua que camina", observation: "El agua sube por papel formando arcoíris. 💦", img: "https://i.ytimg.com/vi/9EUfVIon6t8/maxresdefault.jpg", instructions: "Vasos con agua coloreada y papel absorbente.", question_guide: "¿Cómo sube el agua?", quiz: [
+                    { q: "¿Qué es capilaridad?", opts: ["Agua sube por tubos finos", "Agua vuela", "Agua desaparece"], ans: 0 },
+                    { q: "¿Colores se mezclan?", opts: ["Sí", "No", "Tal vez"], ans: 0 },
+                    { q: "¿Tiempo?", opts: ["Minutos", "Días", "Segundos"], ans: 0 }
+                ], steps: ["Preparar vasos", "Conectar con papel", "Observar", "Fotografiar", "Explicar"] },
+                { key: 'huevos_flotan', name: "Huevos que flotan", observation: "Huevo flota en agua salada. 🥚", img: "https://www.science-sparks.com/wp-content/uploads/2021/02/Egg-in-Salt-Water-Experiment-1024x788.jpeg", instructions: "Huevos, agua, sal en vasos.", question_guide: "¿Qué hace flotar un huevo?", quiz: [
+                    { q: "¿Por qué flota?", opts: ["Más denso el agua", "Menos sal", "Magia"], ans: 0 },
+                    { q: "¿Sin sal?", opts: ["Flota", "Se hunde", "Explota"], ans: 1 },
+                    { q: "¿Cuánta sal?", opts: ["Mucha", "Poca", "Ninguna"], ans: 0 }
+                ], steps: ["Agregar sal", "Poner huevo", "Comparar", "Medir", "Concluir"] }
+            ],
+            aire: [
+                { key: 'globo_infla', name: "Globo que se infla solo", observation: "Globo se infla con gas. 🎈", img: "https://cms-assets.prod.pbskids.org/global/Balloon-Science-Experiment.jpg", instructions: "Botella, globo, vinagre y bicarbonato.", question_guide: "¿Cómo inflar sin soplar?", quiz: [
+                    { q: "¿Qué genera gas?", opts: ["Reacción química", "Aire", "Agua"], ans: 0 },
+                    { q: "¿Vinagre + bicarbonato?", opts: ["CO2", "O2", "Nada"], ans: 0 },
+                    { q: "¿Tamaño globo?", opts: ["Pequeño", "Grande", "Igual"], ans: 1 }
+                ], steps: ["Preparar botella", "Agregar reactivos", "Observar", "Medir", "Explicar"] }
+            ],
+            materia: [
+                { key: 'volcan', name: "Volcán en erupción", observation: "Lava sale del volcán. 🌋", img: "https://www.weknowstuff.us.com/images/2016/04/wks_stemvolcano1.jpg", instructions: "Bicarbonato, vinagre, colorante en un modelo de volcán.", question_guide: "¿Qué pasa al mezclar?", quiz: [
+                    { q: "¿Reacción?", opts: ["Química", "Física", "Biológica"], ans: 0 },
+                    { q: "¿Gas producido?", opts: ["CO2", "O2", "H2"], ans: 0 },
+                    { q: "¿Altura erupción?", opts: ["Alta", "Baja", "Media"], ans: 0 }
+                ], steps: ["Construir volcán", "Agregar ingredientes", "Observar", "Fotografiar", "Concluir"] },
+                { key: 'tinta_inv', name: "Tinta invisible", observation: "Mensaje aparece con calor. ✏️", img: "https://i.ytimg.com/vi/poCnU_crpjQ/maxresdefault.jpg", instructions: "Jugo de limón en papel, calentar con lámpara.", question_guide: "¿Cómo hacer mensaje secreto?", quiz: [
+                    { q: "¿Por qué aparece?", opts: ["Oxidación", "Magia", "Agua"], ans: 0 },
+                    { q: "¿Con qué?", opts: ["Calor", "Frío", "Luz"], ans: 0 },
+                    { q: "¿Material?", opts: ["Limón", "Leche", "Sal"], ans: 0 }
+                ], steps: ["Escribir", "Secar", "Calentar", "Revelar", "Explicar"] },
+                { key: 'cristales', name: "Cristales de sal", observation: "Forma cristales brillantes. ❄️", img: "https://i.ytimg.com/vi/AHV02JrQyds/maxresdefault.jpg", instructions: "Agua caliente, sal, cuerda en un vaso.", question_guide: "¿Cómo crecen cristales?", quiz: [
+                    { q: "¿Qué forma cristales?", opts: ["Evaporación", "Calor", "Frío"], ans: 0 },
+                    { q: "¿Tiempo?", opts: ["Días", "Minutos", "Horas"], ans: 0 },
+                    { q: "¿Color?", opts: ["Blanco", "Arcoíris", "Negro"], ans: 0 }
+                ], steps: ["Disolver sal", "Colgar cuerda", "Esperar", "Observar", "Concluir"] }
+            ],
+            energia: [
+                { key: 'lampara_lava', name: "Lámpara de lava casera", observation: "Burbujas suben y bajan. 🪔", img: "https://i.ytimg.com/vi/qCuFjXGSVB4/maxresdefault.jpg", instructions: "Vaso, agua, aceite, colorante, tableta efervescente.", question_guide: "¿Por qué suben burbujas?", quiz: [
+                    { q: "¿Densidad cambia con?", opts: ["Gas", "Calor", "Frío"], ans: 0 },
+                    { q: "¿Colores?", opts: ["Se mezclan", "Separan", "Desaparecen"], ans: 1 },
+                    { q: "¿Reacción?", opts: ["Efervescente", "Normal", "Ninguna"], ans: 0 }
+                ], steps: ["Llenar vaso", "Agregar aceite", "Color", "Tableta", "Observar"] }
+            ],
+            luz: [
+                { key: 'arcoiris_vaso', name: "Arcoíris en un vaso", observation: "Luz forma arcoíris. 🌈", img: "https://www.rookieparenting.com/wp-content/uploads/rainbow-spectrum-colors-735x546.png", instructions: "Vaso con agua, espejo, luz, hoja blanca.", question_guide: "¿Cómo se forma un arcoíris?", quiz: [
+                    { q: "¿Refracción es?", opts: ["Luz se dobla", "Luz desaparece", "Luz brilla"], ans: 0 },
+                    { q: "¿Colores del arcoíris?", opts: ["7", "3", "10"], ans: 0 },
+                    { q: "¿Con qué luz?", opts: ["Solar o linterna", "Oscuridad", "Cualquiera"], ans: 0 }
+                ], steps: ["Poner agua", "Espejo", "Luz", "Proyectar", "Dibujar"] }
+            ],
+            fisica: [
+                { key: 'imanes', name: "Imanes flotantes", observation: "Imanes repelen y flotan. 🧲", img: "https://cdn.babbledabbledo.com/wp-content/uploads/2017/03/20-Science-Fair-Projects-FI.jpg", instructions: "Imanes, base de cartón.", question_guide: "¿Por qué flotan imanes?", quiz: [
+                    { q: "¿Fuerza?", opts: ["Magnética", "Gravedad", "Aire"], ans: 0 },
+                    { q: "¿Polos iguales?", opts: ["Repelen", "Atraen", "Nada"], ans: 0 },
+                    { q: "¿Material?", opts: ["Metal", "Plástico", "Madera"], ans: 0 }
+                ], steps: ["Apilar imanes", "Observar repulsión", "Medir altura", "Fotografiar", "Concluir"] },
+                { key: 'balanza', name: "Balanza casera", observation: "Mide pesos con regla. ⚖️", img: "https://i.ytimg.com/vi/9J_SCQhTmcM/maxresdefault.jpg", instructions: "Regla, monedas, objetos pequeños.", question_guide: "¿Cómo equilibrar pesos?", quiz: [
+                    { q: "¿Principio?", opts: ["Equilibrio", "Fricción", "Velocidad"], ans: 0 },
+                    { q: "¿Más pesado?", opts: ["Baja", "Sube", "Igual"], ans: 0 },
+                    { q: "¿Unidades?", opts: ["Monedas", "Kilos", "Metros"], ans: 0 }
+                ], steps: ["Armar balanza", "Pesar objetos", "Comparar", "Registrar", "Explicar"] },
+                { key: 'sonido_vasos', name: "Sonido con vasos", observation: "Vasos hacen música. 🎵", img: "https://www.mkewithkids.com/wp-content/uploads/Walking-Rainbow-scaled-min-1024x768-1.jpeg", instructions: "Vasos con agua diferente, cucharas.", question_guide: "¿Cómo cambia el sonido?", quiz: [
+                    { q: "¿Más agua?", opts: ["Sonido grave", "Agudo", "Silencio"], ans: 0 },
+                    { q: "¿Vibración?", opts: ["Sí", "No", "Tal vez"], ans: 0 },
+                    { q: "¿Instrumento?", opts: ["Percusión", "Cuerda", "Viento"], ans: 0 }
+                ], steps: ["Llenar vasos", "Golpear", "Escuchar", "Ajustar", "Concluir"] }
+            ],
+            biologia: [
+                { key: 'microorganismos', name: "Microorganismos en agua", observation: "Ve bichitos con lupa. 🦠", img: "https://littlebinsforlittlehands.com/wp-content/uploads/2023/07/bubble-science-680x356.jpg", instructions: "Agua de charco, lupa o microscopio casero.", question_guide: "¿Qué vive en el agua?", quiz: [
+                    { q: "¿Microscopio muestra?", opts: ["Bacterias", "Estrellas", "Nada"], ans: 0 },
+                    { q: "¿Tamaño?", opts: ["Pequeño", "Grande", "Medio"], ans: 0 },
+                    { q: "¿Movimiento?", opts: ["Sí", "No", "Lento"], ans: 0 }
+                ], steps: ["Recolectar agua", "Observar con lupa", "Dibujar", "Comparar", "Concluir"] },
+                { key: 'fotosintesis', name: "Fotosíntesis simple", observation: "Plantas necesitan luz. ☀️", img: "https://busytoddler.com/wp-content/uploads/2023/02/Skittles-Rainbow-Science-Activity-4.jpg", instructions: "Hoja en agua con luz y sin luz.", question_guide: "¿Por qué las plantas son verdes?", quiz: [
+                    { q: "¿Proceso?", opts: ["Fotosíntesis", "Respiración", "Digestión"], ans: 0 },
+                    { q: "¿Necesita?", opts: ["Luz", "Oscuridad", "Agua sola"], ans: 0 },
+                    { q: "¿Gas producido?", opts: ["Oxígeno", "CO2", "Nitrógeno"], ans: 0 }
+                ], steps: ["Poner hoja", "Exponer a luz", "Observar burbujas", "Comparar", "Explicar"] },
+                { key: 'ciclo_vida', name: "Ciclo de vida de mariposa", observation: "Observa transformación. 🦋", img: "https://images.sciencebuddies.org/HqN87wJo8QiCw3zCgJFLBL1gAlA=/288x162/-/https/i.ytimg.com/vi/GDROkh1zlr8/maxresdefault.jpg", instructions: "Oruga en caja, hojas.", question_guide: "¿Cómo cambia una oruga?", quiz: [
+                    { q: "¿Etapas?", opts: ["4", "2", "6"], ans: 0 },
+                    { q: "¿De oruga a?", opts: ["Mariposa", "Pájaro", "Pez"], ans: 0 },
+                    { q: "¿Tiempo?", opts: ["Semanas", "Horas", "Años"], ans: 0 }
+                ], steps: ["Recolectar oruga", "Alimentar", "Observar cambios", "Fotografiar", "Liberar"] }
+            ]
+        };
+
+        // Volver al inicio
+        document.getElementById('home-btn').addEventListener('click', () => {
+            document.getElementById('main-screen').classList.add('active');
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('experiment-screen').classList.remove('active');
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step1').classList.add('active');
+            currentStep = 1;
+            document.getElementById('game-content').innerHTML = '';
+            confettiEffect();
+        });
+
+        // Botones de juegos (sin crucigrama)
+        document.getElementById('btn-quiz').onclick = () => startGame('quiz');
+        document.getElementById('btn-memory').onclick = () => startGame('memory');
+        document.getElementById('btn-wordsearch').onclick = () => startGame('wordsearch');
+        document.getElementById('btn-maze').onclick = () => startGame('maze');
+
+        function startGame(game) {
+            currentGame = game;
+            currentLevel = 1;
+            document.getElementById('main-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+            playLevel(game, currentLevel);
+        }
+
+        function playLevel(game, level) {
+            const content = document.getElementById('game-content');
+            content.innerHTML = `<h2 style="text-align:center; color:#ff4757;">${game.toUpperCase()} - Nivel ${level} 🌟</h2>`;
+
+            if (game === 'quiz') playQuiz(level, content);
+            if (game === 'memory') playMemory(level, content);
+            if (game === 'wordsearch') playWordsearch(level, content);
+            if (game === 'maze') playMaze(level, content);
+        }
+
+        function addPoints(points) {
+            score += points;
+            document.getElementById('score').innerText = score;
+            const idx = Math.min(Math.floor(score / 100), 4);
+            document.getElementById('level').innerText = levels[idx];
+        }
+
+        function nextLevel() {
+            currentLevel++;
+            if (currentLevel > 5) {
+                confettiEffect();
+                alert('¡Felicidades! Completaste todos los niveles 🎉');
+                addPoints(100);
+                document.getElementById('home-btn').click();
+            } else {
+                playLevel(currentGame, currentLevel);
+            }
+        }
+
+        function confettiEffect() {
+            const canvas = document.getElementById('confetti');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'];
+            for (let i = 0; i < 150; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                ctx.fillRect(x, y, 12, 12);
+            }
+            setTimeout(() => ctx.clearRect(0, 0, canvas.width, canvas.height), 3000);
+        }
+
+        // === QUIZ ===
+        function playQuiz(level, container) {
+            const questions = [
+                ["¿Qué necesitan las plantas para vivir?", ["Sol y agua", "Caramelos", "Juguetes"], 0],
+                ["¿Qué estado tiene el hielo?", ["Líquido", "Sólido", "Gas"], 1],
+                ["¿Qué produce el volcán casero?", ["Agua", "Gas", "Fuego"], 1],
+                ["¿Por qué flota el aceite en el agua?", ["Es más ligero", "Es más pesado", "Es azul"], 0],
+                ["¿Cuántos colores tiene el arcoíris?", ["5", "7", "10"], 1]
+            ];
+            const q = questions[level - 1];
+            let html = `<p style="font-size:2em; text-align:center;">${q[0]}</p>`;
+            q[1].forEach((opt, i) => {
+                html += `<button style="display:block; margin:20px auto; width:80%; font-size:1.8em;" onclick="checkQuizAnswer(${i},${q[2]})">${opt}</button>`;
+            });
+            container.innerHTML += html;
+        }
+
+        function checkQuizAnswer(selected, correct) {
+            if (selected === correct) {
+                confettiEffect();
+                alert('¡Correcto! 🌟');
+                addPoints(20);
+                setTimeout(nextLevel, 1500);
+            } else {
+                alert('Intenta otra vez 😊');
+            }
+        }
+
+        // === MEMORIA ===
+        function playMemory(level, container) {
+            const pairs = level + 3;
+            const icons = ['🌱','💧','🔥','☀️','🌈','🧲','🎈','🥚','❄️','🦠'];
+            const selected = icons.slice(0, pairs);
+            let cards = [...selected, ...selected].sort(() => Math.random() - 0.5);
+
+            let html = `<div class="memory-grid" style="grid-template-columns:repeat(4,1fr);">`;
+            cards.forEach((icon, i) => {
+                html += `<div class="memory-card" onclick="flipCard(this,'${icon}',${pairs})">?</div>`;
+            });
+            html += `</div><p id="memory-status" style="text-align:center; font-size:2em; margin-top:30px;">Encuentra todas las parejas</p>`;
+            container.innerHTML += html;
+
+            let flipped = [];
+            let matched = 0;
+            window.flipCard = function(el, icon, totalPairs) {
+                if (el.classList.contains('flipped') || flipped.length === 2) return;
+                el.innerText = icon;
+                el.classList.add('flipped');
+                flipped.push({el, icon});
+
+                if (flipped.length === 2) {
+                    if (flipped[0].icon === flipped[1].icon) {
+                        matched++;
+                        if (matched === totalPairs) {
+                            confettiEffect();
+                            addPoints(30);
+                            setTimeout(nextLevel, 2000);
+                        }
+                    } else {
+                        setTimeout(() => {
+                            flipped.forEach(c => {
+                                c.el.innerText = '?';
+                                c.el.classList.remove('flipped');
+                            });
+                            flipped = [];
+                        }, 1000);
+                    }
+                    flipped = [];
+                }
+            };
+        }
+
+        // === SOPA DE LETRAS ===
+        function playWordsearch(level, container) {
+            const wordsByLevel = [
+                ['SOL', 'AGUA', 'PLANTA', 'LUZ'],
+                ['AIRE', 'FUEGO', 'VOLCAN', 'HIELO'],
+                ['ARCO', 'IRIS', 'GAS', 'SAL'],
+                ['CRISTAL', 'IMAN', 'ONDA'],
+                ['FOTO', 'SINTESIS', 'RAIZ', 'HOJA']
+            ];
+            const words = wordsByLevel[level-1];
+            const size = 12;
+            const grid = Array(size).fill().map(() => Array(size).fill(''));
+
+            words.forEach(word => {
+                let placed = false;
+                while (!placed) {
+                    const dir = Math.random() < 0.5 ? 'h' : 'v';
+                    const row = Math.floor(Math.random() * size);
+                    const col = Math.floor(Math.random() * size);
+                    if (dir === 'h' && col + word.length <= size) {
+                        let canPlace = true;
+                        for (let i = 0; i < word.length; i++) if (grid[row][col+i] !== '' && grid[row][col+i] !== word[i]) canPlace = false;
+                        if (canPlace) {
+                            for (let i = 0; i < word.length; i++) grid[row][col+i] = word[i];
+                            placed = true;
+                        }
+                    } else if (dir === 'v' && row + word.length <= size) {
+                        let canPlace = true;
+                        for (let i = 0; i < word.length; i++) if (grid[row+i][col] !== '' && grid[row+i][col] !== word[i]) canPlace = false;
+                        if (canPlace) {
+                            for (let i = 0; i < word.length; i++) grid[row+i][col] = word[i];
+                            placed = true;
+                        }
+                    }
+                }
+            });
+
+            for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if (grid[i][j] === '') grid[i][j] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+
+            let html = `<div id="wordsearch-grid" style="grid-template-columns:repeat(${size},40px);">`;
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    html += `<div class="ws-cell" onclick="toggleFound(this)">${grid[i][j]}</div>`;
+                }
+            }
+            html += `</div>`;
+            html += `<p style="text-align:center; font-size:2em;">Busca: <strong>${words.join(' • ')}</strong></p>`;
+            container.innerHTML += html;
+
+            window.toggleFound = function(cell) {
+                cell.classList.toggle('found');
+                if (document.querySelectorAll('.ws-cell.found').length > words.join('').length * 1.5) {
+                    confettiEffect();
+                    addPoints(25);
+                    setTimeout(nextLevel, 1500);
+                }
+            };
+        }
+
+        // === LABERINTO ===
+        function playMaze(level, container) {
+            const size = 400 + level * 50;
+            let html = `<canvas id="maze-canvas" width="${size}" height="${size}"></canvas>`;
+            html += `<p style="text-align:center; font-size:2em;">¡Lleva la gotita de agua 💧 hasta la plantita 🌱 dibujando con el ratón!</p>`;
+            container.innerHTML += html;
+
+            const canvas = document.getElementById('maze-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.font = '50px Arial';
+            ctx.fillText('💧', 20, 60); // Gotita inicial
+            ctx.fillText('🌱', size-80, size-60); // Plantita final
+
+            ctx.fillStyle = '#795548';
+            for (let i = 0; i < level * 8; i++) {
+                const x = Math.random() * (size - 100) + 50;
+                const y = Math.random() * (size - 100) + 50;
+                ctx.fillRect(x, y, 60, 60);
+            }
+
+            let drawing = false;
+            canvas.addEventListener('mousedown', () => drawing = true);
+            canvas.addEventListener('mouseup', () => {
+                drawing = false;
+                if (ctx.getImageData(size-50, size-50, 1, 1).data[3] > 0) { // Detecta si dibujó cerca de la planta
+                    confettiEffect();
+                    addPoints(30);
+                    setTimeout(nextLevel, 1500);
+                }
+            });
+            canvas.addEventListener('mousemove', (e) => {
+                if (!drawing) return;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                ctx.fillStyle = '#90caf9';
+                ctx.fillRect(x-10, y-10, 20, 20);
+            });
+        }
+
+        // === EXPERIMENTOS ===
+        function showExperiments() {
+            document.getElementById('main-screen').classList.remove('active');
+            document.getElementById('experiment-screen').classList.add('active');
+        }
+
+        function selectCategory(cat) {
+            const list = document.getElementById('experiment-list');
+            list.innerHTML = '';
+            categories[cat].forEach(exp => {
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                card.innerHTML = `<img src="${exp.img}" alt="${exp.name}"><br>${exp.name}`;
+                card.onclick = () => selectExperiment(exp);
+                list.appendChild(card);
+            });
+            goToStep(1.5);
+        }
+
+        function selectExperiment(exp) {
+            experiment = exp;
+            document.getElementById('observation').innerText = exp.observation;
+            document.getElementById('anim-img').src = exp.img;
+            document.getElementById('instructions').innerText = exp.instructions;
+            document.getElementById('question-guide').innerText = 'Guía: ' + exp.question_guide;
+            setupQuiz(exp.quiz);
+            setupDragGame(exp.steps);
+            goToStep(2);
+            addPoints(10);
+        }
+
+        function goToStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(step === 1.5 ? 'step1-5' : 'step' + step).classList.add('active');
+            currentStep = step;
+        }
+
+        function nextStep() {
+            if (currentStep === 1.5) currentStep = 1;
+            goToStep(currentStep + 1);
+            if (currentStep >= 8) unlockBadge();
+        }
+
+        function prevStep() {
+            goToStep(currentStep - 1);
+        }
+
+        document.getElementById('photos').addEventListener('change', e => {
+            const preview = document.getElementById('photo-preview');
+            preview.innerHTML = '';
+            for (let file of e.target.files) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.width = '150px'; img.style.margin = '10px'; img.style.borderRadius = '10px'; img.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+                preview.appendChild(img);
+            }
+            addPoints(20);
+        });
+
+        function addRow() {
+            const table = document.getElementById('data-table');
+            const row = table.insertRow();
+            row.innerHTML = `<td>${table.rows.length - 1}</td><td><input type="text"></td>`;
+            addPoints(5);
+        }
+
+        function drawChart() {
+            const ctx = document.getElementById('chart').getContext('2d');
+            if (chart) chart.destroy();
+            const labels = []; const data = [];
+            const table = document.getElementById('data-table');
+            for (let i = 1; i < table.rows.length; i++) {
+                labels.push('Día ' + table.rows[i].cells[0].innerText);
+                data.push(parseFloat(table.rows[i].cells[1].querySelector('input').value) || Math.random() * 5);
+            }
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets: [{ label: 'Observaciones', data, borderColor: '#ff5722', fill: true, backgroundColor: 'rgba(255,87,34,0.2)' }] },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+            addPoints(15);
+        }
+
+        function setupQuiz(quiz) {
+            const quizDiv = document.getElementById('quiz');
+            quizDiv.innerHTML = '';
+            quiz.forEach((q, i) => {
+                const div = document.createElement('div');
+                div.className = 'quiz-question';
+                div.innerHTML = `<p>${q.q}</p>`;
+                q.opts.forEach((opt, j) => {
+                    div.innerHTML += `<label class="quiz-option"><input type="radio" name="q${i}" value="${j}"> ${opt}</label>`;
+                });
+                quizDiv.appendChild(div);
+            });
+        }
+
+        function checkQuiz() {
+            let correct = 0;
+            experiment.quiz.forEach((q, i) => {
+                const selected = document.querySelector(`input[name="q${i}"]:checked`);
+                if (selected && parseInt(selected.value) === q.ans) correct++;
+            });
+            document.getElementById('quiz-result').innerText = `¡Acertaste ${correct} de ${experiment.quiz.length}! 🎉`;
+            addPoints(correct * 10);
+            if (correct === experiment.quiz.length) confettiEffect();
+        }
+
+        function setupDragGame(steps) {
+            const itemsDiv = document.getElementById('drag-items');
+            const zonesDiv = document.getElementById('drop-zones');
+            itemsDiv.innerHTML = ''; zonesDiv.innerHTML = '';
+            const shuffled = [...steps].sort(() => Math.random() - 0.5);
+            shuffled.forEach(step => {
+                const item = document.createElement('div');
+                item.className = 'drag-item';
+                item.draggable = true;
+                item.innerText = step;
+                item.ondragstart = e => e.dataTransfer.setData('text', step);
+                itemsDiv.appendChild(item);
+            });
+            steps.forEach(() => {
+                const zone = document.createElement('div');
+                zone.className = 'drop-zone';
+                zone.ondrop = e => {
+                    e.preventDefault();
+                    if (!zone.innerText) zone.innerText = e.dataTransfer.getData('text');
+                };
+                zone.ondragover = e => e.preventDefault();
+                zonesDiv.appendChild(zone);
+            });
+        }
+
+        function checkDrag() {
+            const zones = document.querySelectorAll('.drop-zone');
+            let correct = 0;
+            experiment.steps.forEach((step, i) => {
+                if (zones[i].innerText === step) correct++;
+            });
+            document.getElementById('drag-result').innerText = `¡Ordenaste ${correct} de ${experiment.steps.length} correctamente! 🧩`;
+            addPoints(correct * 10);
+            if (correct === experiment.steps.length) confettiEffect();
+        }
+
+        function unlockBadge() {
+            document.getElementById('badges').innerHTML += '<span class="badge">🏆</span>';
+            addPoints(50);
+        }
+
+        function generateReport() {
+            const element = document.createElement('div');
+            element.innerHTML = `
+                <h1>¡Informe Súper Científico! - ${experiment.name} 🚀</h1>
+                <p><strong>Pregunta:</strong> ${document.getElementById('question').value}</p>
+                <p><strong>Hipótesis:</strong> ${document.getElementById('hypothesis').value}</p>
+                <p><strong>Conclusión:</strong> ${document.getElementById('conclusion').value}</p>
+                <div>${document.getElementById('photo-preview').innerHTML}</div>
+                <img src="${document.getElementById('chart').toDataURL()}" style="max-width:100%;">
+            `;
+            document.getElementById('report-preview').innerHTML = element.innerHTML;
+            html2pdf().from(element).save('informe_exploraciencia_kids.pdf');
+            addPoints(30);
+        }
+
+        function share() {
+            alert('¡Compartido con éxito! Tus amigos verán tu gran descubrimiento. 👏');
+            addPoints(20);
+        }
+      </script>
+</body>
+</html>
